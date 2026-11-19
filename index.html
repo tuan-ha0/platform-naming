@@ -266,7 +266,7 @@ button{font:inherit;color:inherit}
 </defs></svg>
 <div class="shell">
   <aside class="rail" aria-label="Candidate names">
-    <h1><span data-n></span> powers the nation’s largest psychiatry practice.</h1>
+    <h1>Platform naming in context</h1>
     <p class="lede">Select a name. The EHR, web page and press release update to use it.</p>
     <div id="groups"></div>
     <p class="keys"><kbd>↑</kbd> <kbd>↓</kbd> move through names.</p>
@@ -349,7 +349,7 @@ button{font:inherit;color:inherit}
           <div class="w-hero">
             <div class="l">
               <p class="w-eyebrow">The technology behind Talkiatry</p>
-              <h3>Meet <span data-n></span>, the platform built for psychiatric care.</h3>
+              <h3>Meet <span data-n></span>, the platform powering the world’s largest psychiatry practice.</h3>
               <p class="sub">One system for the record, the note, the match and the outcomes. Built in-house by Talkiatry.</p>
               <span class="w-btn">See how <span data-n></span> works</span>
             </div>
@@ -586,7 +586,7 @@ stage.innerHTML =
   `<svg class="w-lines" viewBox="0 0 630 620" aria-hidden="true">${PATHS.map((d, i) => `<path d="${d}" pathLength="1" style="--i:${i}"/>`).join("")}</svg>` +
   TOOLS.map(([k, t], i) => `<div class="w-chip" style="left:${CHIP_XY[i][0]}px;top:${CHIP_XY[i][1]}px;--i:${i}">${brandIcon(k, 48)}<span>${t === "Electronic health record" ? "Health record" : t}</span></div>`).join("") +
   PATHS.map((d, i) => `<span class="w-pulse" style="offset-path:path('${d}');--i:${i}"></span>`).join("") +
-  `<div class="w-lock"><div class="w-lockup" id="lockup"><span class="w-mark"></span><span>Talkiatry</span><span class="nm" data-n></span></div><small>The technology and data platform behind our care</small></div>` +
+  `<div class="w-lock"><div class="w-lockup" id="lockup"><span class="w-mark"></span><span>Talkiatry</span><span class="nm" data-n></span></div><small>The AI platform reimagining behavioral health</small></div>` +
   `<div class="w-wipe"></div>`;
 const lockup = document.getElementById("lockup");
 function fitLockup() {
