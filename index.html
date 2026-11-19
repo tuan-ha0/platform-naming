@@ -12,14 +12,14 @@
 :root{
   --page:#FFFFFF; --rail:#F2F0E8; --rail-line:#E0DCCF; --ink:#1E251D; --ink-soft:#5A6159;
   --line:#E2E1DB; --green:#5B7C55; --green-ink:#FFFFFF; --pick:#DDE7D9; --pick-ink:#1E251D;
-  --paper:#FFFFFF; --paper-line:#D9D7CF; --note:#FAF3D9; --note-line:#E8D68A; --focus:#3D5C38;
+  --paper:#FFFFFF; --paper-line:#D9D7CF; --note:#FAF3D9; --note-line:#E8D68A; --focus:#3D5C38; --rt-like:#B3941F;
   --serif:"Literata",Georgia,serif; --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 @media (prefers-color-scheme:dark){
   :root{color-scheme:dark;
     --page:#181D18; --rail:#121612; --rail-line:#2A312A; --ink:#ECEBE4; --ink-soft:#A7AEA5;
     --line:#2E352E; --green:#8FB388; --green-ink:#121612; --pick:#33452F; --pick-ink:#ECEBE4;
-    --paper:#1F251F; --paper-line:#353D35; --note:#2D2917; --note-line:#5A5025; --focus:#B5D3AF;
+    --paper:#1F251F; --paper-line:#353D35; --note:#2D2917; --note-line:#5A5025; --focus:#B5D3AF; --rt-like:#D9BC55;
   }
 }
 *{box-sizing:border-box}
@@ -43,6 +43,29 @@ button{font:inherit;color:inherit}
 .names button[aria-pressed="true"]{background:var(--green);color:var(--green-ink);font-weight:600}
 .keys{font-size:12.5px;color:var(--ink-soft);margin:0 8px}
 .keys kbd{font-family:var(--sans);font-size:11.5px;border:1px solid var(--rail-line);border-bottom-width:2px;border-radius:5px;padding:1px 5px;background:var(--page)}
+
+/* ---------- rating buckets: drag names into Love / Like / No ---------- */
+.names button{touch-action:pan-y}
+.buckets{margin:0 0 20px}
+.bucket{border:1.5px dashed var(--rail-line);border-radius:10px;padding:8px 8px 6px;margin-bottom:8px;transition:border-color .15s ease,background .15s ease}
+.bucket h2{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;padding:0 2px;display:flex;justify-content:space-between;color:var(--ink-soft)}
+.bucket[data-bucket="love"] h2{color:var(--green)}
+.bucket[data-bucket="like"] h2{color:var(--rt-like)}
+.bucket .hint{margin:0 2px 2px;font-size:12px;color:var(--ink-soft);opacity:.75}
+.bucket.over{border-style:solid}
+.bucket[data-bucket="love"].over{border-color:var(--green);background:var(--pick)}
+.bucket[data-bucket="like"].over{border-color:var(--rt-like);background:var(--note)}
+.bucket[data-bucket="no"].over{border-color:var(--ink-soft);background:color-mix(in srgb,var(--ink) 8%,transparent)}
+#groups.over{outline:1.5px dashed var(--ink-soft);outline-offset:4px;border-radius:8px}
+body.dnd{cursor:grabbing}
+body.dnd .bucket{border-color:color-mix(in srgb,var(--ink) 30%,transparent)}
+.drag-chip{position:fixed;z-index:99;pointer-events:none;background:var(--page);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:14px;font-weight:600;box-shadow:0 10px 26px rgba(0,0,0,.22)}
+.tally{border-top:1px solid var(--rail-line);margin:18px 8px 0;padding-top:14px;font-size:12.5px;color:var(--ink-soft)}
+.tally .counts{margin:0 0 10px}
+.tally .counts b{color:var(--ink);font-weight:600}
+.tally button{display:block;width:100%;text-align:center;border:1px solid var(--rail-line);background:var(--page);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:12.5px;font-weight:600;cursor:pointer;margin-bottom:6px}
+.tally button:hover{border-color:var(--ink-soft)}
+.tally button.clear{border:0;background:none;width:auto;margin:2px auto 0;font-weight:500;color:var(--ink-soft);text-decoration:underline}
 
 /* ---------- right side ---------- */
 .main{padding:30px 40px 72px;min-width:0}
@@ -269,9 +292,15 @@ button{font:inherit;color:inherit}
 <div class="shell">
   <aside class="rail" aria-label="Candidate names">
     <h1>Platform naming in context</h1>
-    <p class="lede">Select a name. The EHR, web page and press release update to use it.</p>
+    <p class="lede">Select a name to preview it in the EHR, web page and press release. Drag names into Love, Like or No, then send the results back with one click.</p>
+    <div class="buckets" id="buckets" aria-label="Your ratings">
+      <div class="bucket" data-bucket="love"><h2>♥ Love <span>0</span></h2><ul class="names"></ul><p class="hint">Drag names here</p></div>
+      <div class="bucket" data-bucket="like"><h2>✓ Like <span>0</span></h2><ul class="names"></ul><p class="hint">Drag names here</p></div>
+      <div class="bucket" data-bucket="no"><h2>✕ No <span>0</span></h2><ul class="names"></ul><p class="hint">Drag names here</p></div>
+    </div>
     <div id="groups"></div>
-    <p class="keys"><kbd>↑</kbd> <kbd>↓</kbd> move through names.</p>
+    <p class="keys"><kbd>↑</kbd> <kbd>↓</kbd> move through names · <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> rate.</p>
+    <div class="tally" id="tally"></div>
   </aside>
 
   <main class="main">
@@ -608,9 +637,42 @@ const groupsEl = document.getElementById("groups");
 const frame = document.getElementById("frame"), ehr = document.getElementById("ehr"), ebrand = document.getElementById("ebrand");
 let current = ALL[0];
 
-groupsEl.innerHTML = GROUPS.map(g => `
-  <div class="group"><h2>${g.title} <span>${g.names.length}</span></h2>
-  <ul class="names">${g.names.map(x => `<li><button type="button" data-name="${x.n}" aria-pressed="false">${x.n}</button></li>`).join("")}</ul></div>`).join("");
+// ---------- ratings state ----------
+const RATINGS_KEY = "platformNameRatings";
+const RT = { love: 1, like: 1, no: 1 };
+let ratings = {};
+try { ratings = JSON.parse(localStorage.getItem(RATINGS_KEY)) || {}; } catch (e) {}
+const byRate = r => ALL.filter(x => ratings[x.n] === r).map(x => x.n);
+const ratingsHash = () => ["love", "like", "no"]
+  .map(r => { const v = byRate(r); return v.length ? "/" + r + ":" + v.map(slug).join(",") : ""; }).join("");
+function saveRatings() {
+  try { localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings)); } catch (e) {}
+  try { history.replaceState(null, "", "#" + slug(current.n) + ratingsHash()); } catch (e) {}
+  queueSubmit();
+}
+const btnFor = n => `<li><button type="button" data-name="${n}" aria-pressed="false">${n}</button></li>`;
+function renderLists() {
+  groupsEl.innerHTML = GROUPS.map(g => {
+    const names = g.names.filter(x => !ratings[x.n]);
+    return `<div class="group"><h2>${g.title} <span>${names.length}</span></h2>
+  <ul class="names">${names.map(x => btnFor(x.n)).join("")}</ul></div>`;
+  }).join("");
+  document.querySelectorAll("#buckets .bucket").forEach(bk => {
+    const names = byRate(bk.dataset.bucket);
+    bk.querySelector("ul").innerHTML = names.map(btnFor).join("");
+    bk.querySelector("h2 span").textContent = names.length;
+    bk.querySelector(".hint").style.display = names.length ? "none" : "";
+  });
+  document.querySelectorAll(".names button").forEach(b => b.setAttribute("aria-pressed", b.dataset.name === current.n));
+  const l = byRate("love").length, k = byRate("like").length, n = byRate("no").length;
+  const c = document.querySelector("#tally .counts");
+  if (c) c.innerHTML = `<b>${l}</b> love · <b>${k}</b> like · <b>${n}</b> no · ${ALL.length - l - k - n} unrated`;
+}
+function setRating(name, r, keepIfSame) {
+  if (!keepIfSame && ratings[name] === r) delete ratings[name]; else ratings[name] = r;
+  saveRatings(); renderLists();
+}
+renderLists();
 
 // Size the name in the EHR sidebar to the largest size that fits where the Talkiatry wordmark sat.
 function fitBrand() {
@@ -633,13 +695,15 @@ function render(push) {
   document.querySelectorAll(".names button").forEach(b => b.setAttribute("aria-pressed", b.dataset.name === current.n));
   document.title = current.n + " in context";
   fitBrand(); fitLockup(); playReveal(); scaleMocks();
-  if (push) try { history.replaceState(null, "", "#" + slug(current.n)); } catch (e) {}
+  if (push) try { history.replaceState(null, "", "#" + slug(current.n) + ratingsHash()); } catch (e) {}
 }
 function step(d) {
   current = ALL[(ALL.indexOf(current) + d + ALL.length) % ALL.length]; render(true);
   const b = document.querySelector(`.names button[data-name="${current.n}"]`); if (b) b.scrollIntoView({ block: "nearest" });
 }
-groupsEl.addEventListener("click", e => {
+let justDragged = false;
+document.querySelector(".rail").addEventListener("click", e => {
+  if (justDragged) return;
   const b = e.target.closest("button[data-name]");
   if (b) { current = ALL.find(x => x.n === b.dataset.name); render(true); }
 });
@@ -647,13 +711,118 @@ document.addEventListener("keydown", e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === "ArrowDown") { e.preventDefault(); step(1); }
   else if (e.key === "ArrowUp") { e.preventDefault(); step(-1); }
+  else if (e.key === "1" || e.key === "2" || e.key === "3") setRating(current.n, ["love", "like", "no"][+e.key - 1]);
 });
 document.querySelectorAll("[data-jump]").forEach(a => a.addEventListener("click", e => {
   e.preventDefault(); document.getElementById(a.dataset.jump).scrollIntoView({ behavior: "smooth", block: "start" });
 }));
+// ---------- drag and drop ----------
+let drag = null;
+function endDrag() {
+  if (drag && drag.ghost) drag.ghost.remove();
+  document.body.classList.remove("dnd");
+  document.querySelectorAll(".over").forEach(x => x.classList.remove("over"));
+  drag = null;
+}
+document.querySelector(".rail").addEventListener("pointerdown", e => {
+  const b = e.target.closest("button[data-name]");
+  if (!b || e.button !== 0) return;
+  drag = { name: b.dataset.name, x0: e.clientX, y0: e.clientY, started: false, btn: b, id: e.pointerId };
+});
+window.addEventListener("pointermove", e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.started) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 7) return;
+    drag.started = true;
+    try { drag.btn.setPointerCapture(drag.id); } catch (err) {}
+    const g = document.createElement("div");
+    g.className = "drag-chip"; g.textContent = drag.name;
+    document.body.appendChild(g); drag.ghost = g;
+    document.body.classList.add("dnd");
+  }
+  drag.ghost.style.left = (e.clientX + 12) + "px"; drag.ghost.style.top = (e.clientY - 16) + "px";
+  document.querySelectorAll(".over").forEach(x => x.classList.remove("over"));
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const t = el && (el.closest(".bucket") || el.closest("#groups"));
+  if (t) t.classList.add("over");
+});
+window.addEventListener("pointerup", e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag;
+  if (!d.started) { drag = null; return; }
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  endDrag();
+  const bk = el && el.closest(".bucket");
+  if (bk) setRating(d.name, bk.dataset.bucket, true);
+  else if (el && el.closest("#groups")) { delete ratings[d.name]; saveRatings(); renderLists(); }
+  justDragged = true; setTimeout(() => justDragged = false, 50);
+});
+window.addEventListener("pointercancel", endDrag);
+
+// ---------- auto-submit ratings to the Google Sheet ----------
+// When this page is served by the Apps Script web app (script.google.com, Talkiatry
+// sign-in required), ratings submit through google.script.run and the sheet records
+// the signed-in rater. On GitHub Pages the optional SHEET_ENDPOINT fallback applies;
+// left empty, submission is simply off there.
+const SHEET_ENDPOINT = "";
+const RATER = new URLSearchParams(location.search).get("rater") || "";
+const gasRun = () => (typeof google !== "undefined" && google.script && google.script.run) ? google.script.run : null;
+let sendTimer = null;
+const resultsBody = () => JSON.stringify({
+  rater: RATER, love: byRate("love"), like: byRate("like"), no: byRate("no"),
+  unrated: ALL.filter(x => !ratings[x.n]).length
+});
+function sendResults(beacon) {
+  const g = gasRun();
+  if (g) { try { g.submitRatings(resultsBody()); } catch (e) {} return; }
+  if (!SHEET_ENDPOINT) return;
+  try {
+    if (beacon) navigator.sendBeacon(SHEET_ENDPOINT, new Blob([resultsBody()], { type: "text/plain" }));
+    else fetch(SHEET_ENDPOINT, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: resultsBody() });
+  } catch (e) {}
+}
+function queueSubmit() {
+  if (!gasRun() && !SHEET_ENDPOINT) return;
+  clearTimeout(sendTimer);
+  sendTimer = setTimeout(() => { sendTimer = null; sendResults(false); }, 1200);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "hidden" || !sendTimer) return;
+  clearTimeout(sendTimer); sendTimer = null; sendResults(true);
+});
+
+// ---------- results: tally, copy buttons ----------
+const ratingsSummary = () => ["Platform name ratings",
+  "Love: " + (byRate("love").join(", ") || "—"),
+  "Like: " + (byRate("like").join(", ") || "—"),
+  "No: " + (byRate("no").join(", ") || "—"),
+  "Unrated: " + ALL.filter(x => !ratings[x.n]).length + " of " + ALL.length].join("\n");
+function copyText(t, btn) {
+  const done = ok => { const old = btn.textContent; btn.textContent = ok ? "Copied ✓" : "Copy failed"; btn.disabled = true; setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => done(true), () => done(false));
+  else done(false);
+}
+document.getElementById("tally").innerHTML =
+  `<p class="counts"></p><button type="button" id="copySum">Copy results</button><button type="button" id="copyLink">Copy results link</button><button type="button" class="clear" id="clearRt">Clear ratings</button>`;
+document.getElementById("copySum").addEventListener("click", e => copyText(ratingsSummary(), e.currentTarget));
+document.getElementById("copyLink").addEventListener("click", e =>
+  copyText(location.origin + location.pathname + "#" + slug(current.n) + ratingsHash(), e.currentTarget));
+document.getElementById("clearRt").addEventListener("click", () => { ratings = {}; saveRatings(); renderLists(); });
+
 function fromHash() {
-  const f = ALL.find(x => slug(x.n) === location.hash.replace("#", "").split("/")[0]);
-  if (f) current = f; render(false);
+  const seg = location.hash.replace("#", "").split("/");
+  const f = ALL.find(x => slug(x.n) === seg[0]);
+  if (f) current = f;
+  let fromUrl = false;
+  seg.slice(1).forEach(s => {
+    const [r, list] = s.split(":");
+    if (RT[r] && list) {
+      if (!fromUrl) { ratings = {}; fromUrl = true; }
+      list.split(",").forEach(ns => { const x = ALL.find(a => slug(a.n) === ns); if (x) ratings[x.n] = r; });
+    }
+  });
+  if (fromUrl) { try { localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings)); } catch (e) {} }
+  renderLists(); render(false);
 }
 window.addEventListener("hashchange", fromHash);
 new ResizeObserver(scaleMocks).observe(frame);
