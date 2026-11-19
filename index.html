@@ -292,7 +292,7 @@ body.dnd .bucket{border-color:color-mix(in srgb,var(--ink) 30%,transparent)}
 <div class="shell">
   <aside class="rail" aria-label="Candidate names">
     <h1>Platform naming in context</h1>
-    <p class="lede">Select a name to preview it in the EHR, web page and press release. Drag names into Love, Like or No, then send the results back with one click.</p>
+    <p class="lede">Select a name to preview it in the EHR, web page and press release. Drag names into Love, Like or No — ratings are recorded automatically.</p>
     <div class="buckets" id="buckets" aria-label="Your ratings">
       <div class="bucket" data-bucket="love"><h2>♥ Love <span>0</span></h2><ul class="names"></ul><p class="hint">Drag names here</p></div>
       <div class="bucket" data-bucket="like"><h2>✓ Like <span>0</span></h2><ul class="names"></ul><p class="hint">Drag names here</p></div>
@@ -791,22 +791,9 @@ document.addEventListener("visibilitychange", () => {
   clearTimeout(sendTimer); sendTimer = null; sendResults(true);
 });
 
-// ---------- results: tally, copy buttons ----------
-const ratingsSummary = () => ["Platform name ratings",
-  "Love: " + (byRate("love").join(", ") || "—"),
-  "Like: " + (byRate("like").join(", ") || "—"),
-  "No: " + (byRate("no").join(", ") || "—"),
-  "Unrated: " + ALL.filter(x => !ratings[x.n]).length + " of " + ALL.length].join("\n");
-function copyText(t, btn) {
-  const done = ok => { const old = btn.textContent; btn.textContent = ok ? "Copied ✓" : "Copy failed"; btn.disabled = true; setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1500); };
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => done(true), () => done(false));
-  else done(false);
-}
+// ---------- results tally ----------
 document.getElementById("tally").innerHTML =
-  `<p class="counts"></p><button type="button" id="copySum">Copy results</button><button type="button" id="copyLink">Copy results link</button><button type="button" class="clear" id="clearRt">Clear ratings</button>`;
-document.getElementById("copySum").addEventListener("click", e => copyText(ratingsSummary(), e.currentTarget));
-document.getElementById("copyLink").addEventListener("click", e =>
-  copyText(location.origin + location.pathname + "#" + slug(current.n) + ratingsHash(), e.currentTarget));
+  `<p class="counts"></p><button type="button" class="clear" id="clearRt">Clear ratings</button>`;
 document.getElementById("clearRt").addEventListener("click", () => { ratings = {}; saveRatings(); renderLists(); });
 
 function fromHash() {
